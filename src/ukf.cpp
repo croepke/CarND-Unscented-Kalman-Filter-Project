@@ -61,7 +61,6 @@ UKF::UKF() {
    n_x_ = 5;
    n_aug_ = 7;
    Xsig_pred_ = MatrixXd(n_x_, 2*n_x_+1);
-   time_us_= 0;
    weights_ = VectorXd(2*n_aug_+1);
    lambda_ = 3-n_aug_;
 }
@@ -77,25 +76,35 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
    if(!is_initialized_) {
      P_ << MatrixXd::Identity(5,5);
      x_ << 0.1,0.1,0.1,0.1,0.1;
+     time_us_= meas_package.timestamp_;
      is_initialized_ = true;
    }
 
    // Predict the state
-   double dt = meas_package.timestamp_;
+   std::cout << time_us_ << std::endl;
+   std::cout << meas_package.timestamp_ << std::endl;
+   std::cout << Xsig_pred_ << std::endl;
+
+   double dt = (meas_package.timestamp_-time_us_)*10^6;
+   time_us_ = meas_package.timestamp_;
    std::cout << "Prediction " << std::endl;
    Prediction(dt);
+   std::cout << "x_" << x_ << std::endl;
+   std::cout << "P_" << P_ << std::endl;
 
    // Update the state
    if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
      std::cout << "RADAR" << std::endl;
      UpdateRadar(meas_package);
 
-     std::cout << x_ << std::endl;
+     std::cout << "x_" << x_ << std::endl;
+     std::cout << "P_" << P_ << std::endl;
    }
    else if (meas_package.sensor_type_ == MeasurementPackage::LASER) {
      std::cout << "LASER" << std::endl;
      UpdateLidar(meas_package);
-     std::cout << x_ << std::endl;
+     std::cout << "x_" << x_ << std::endl;
+     std::cout << "P_" << P_ << std::endl;
 
    }
    else{
@@ -196,8 +205,6 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
    * covariance, P_.
    * You can also calculate the lidar NIS, if desired.
    */
-   std::cout << "REIN in dem laser";
-
    // Projection Matrix
    MatrixXd H = MatrixXd(2, n_x_);
    H << 1,0,0,0,0,
@@ -209,14 +216,17 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
         0,std_laspy_*std_laspy_;
 
    VectorXd y = meas_package.raw_measurements_ - H*x_;
-   MatrixXd S = H*P_.inverse()*H.transpose()+R;
+   MatrixXd S = H*P_*H.transpose()+R;
    MatrixXd K = P_*H.transpose()*S.inverse();
    MatrixXd I = MatrixXd::Identity(5,5);
 
+   std::cout << "y: " << y << std::endl;
+   std::cout << "S: " << S << std::endl;
+   std::cout << "K: " << K << std::endl;
+   std::cout << "I: " << I << std::endl;
+
    x_ = x_ + K*y;
    P_ = (I-K*H)*P_;
-
-   std::cout << "RAUS aus dem laser";
 
 }
 
